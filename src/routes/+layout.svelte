@@ -1,17 +1,21 @@
 <script lang="ts">
 	import '../app.css';
 	import { onMount } from 'svelte';
-	import { user, session, loading } from '$lib/stores/auth';
-	import { supabase } from '$lib/supabase';
+	import { invalidate } from '$app/navigation';
+	import type { LayoutData } from './$types';
 
-	let { children } = $props();
+	let { children, data }: { children: any, data: LayoutData } = $props();
 
-	onMount(async () => {
-		// Get initial session
-		const { data: { session: initialSession } } = await supabase.auth.getSession();
-		session.set(initialSession);
-		user.set(initialSession?.user ?? null);
-		loading.set(false);
+	onMount(() => {
+		const { data: authListener } = data.supabase.auth.onAuthStateChange((event, _session) => {
+			if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
+				invalidate('supabase:auth');
+			}
+		});
+
+		return () => {
+			authListener.subscription.unsubscribe();
+		};
 	});
 </script>
 
